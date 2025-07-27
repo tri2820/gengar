@@ -48,11 +48,7 @@ describe('toMRKDWN', () => {
         expect(toMRKDWN('___')).toBe('──────────');
     });
 
-    it('converts tables', () => {
-        const md = '|Header|Col2|\n|---|---|\n|A|B|';
-        const expected = '*Header Col2*\n\nA B';
-        expect(toMRKDWN(md)).toBe(expected);
-    });
+    it('converts tables', () => {        const md = '|Header|Col2|\n|---|---|\n|A|B|';        const expected = '```\n|Header|Col2|\n|---|---|\n|A|B|\n```';        expect(toMRKDWN(md)).toBe(expected);    });
 
     it('handles mixed markdown', () => {
         const md = '# Title\n- [ ] Task\n**Bold** and *Italic*\n[Link](url)';
@@ -76,9 +72,5 @@ describe('toMRKDWN', () => {
         expect(toMRKDWN('Just plain text.')).toBe('Just plain text.');
     });
 
-    it('handles tables with empty cells', () => {
-        const md = '| A |   | C |\n|---|---|---|\n| 1 | 2 | 3 |';
-        const expected = '*A C*\n\n1 2 3';
-        expect(toMRKDWN(md)).toBe(expected);
-    });
+    it('handles tables with empty cells', () => {        const md = '| A |   | C |\n|---|---|---|\n| 1 | 2 | 3 |';        const expected = '```\n| A |   | C |\n|---|---|---|\n| 1 | 2 | 3 |\n```';        expect(toMRKDWN(md)).toBe(expected);    })
 });

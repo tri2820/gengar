@@ -43,31 +43,24 @@ export function toMRKDWN(markdown: string): string {
   // Tables
   const lines = text.split('\n');
   const newLines = [];
-  let inTable = false;
-  for (let i = 0; i < lines.length; i++) {
+  let i = 0;
+  while (i < lines.length) {
     const line = lines[i];
     // Check for table header
     if (line.match(/^\s*\|.*\|\s*$/) && i + 1 < lines.length && lines[i + 1].match(/^\s*\|[-|: ]+\|\s*$/)) {
-      const header = line
-        .split('|')
-        .map(s => s.trim())
-        .filter(s => s)
-        .join(' ')
-        .trim();
-      newLines.push(`${boldPlaceholder}${header}${boldPlaceholder}\n`);
-      i++; // Skip separator line
-      inTable = true;
-    } else if (inTable && line.match(/^\s*\|.*\|\s*$/)) {
-      const row = line
-        .split('|')
-        .map(s => s.trim())
-        .filter(s => s)
-        .join(' ')
-        .trim();
-      newLines.push(row);
+      const tableLines = [];
+      tableLines.push(line);
+      tableLines.push(lines[i + 1]);
+      i += 2;
+      while (i < lines.length && lines[i].match(/^\s*\|.*\|\s*$/)) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      newLines.push('```\n' + tableLines.join('\n') + '\n```');
+      // i is already at the line after the table
     } else {
-      inTable = false;
       newLines.push(line);
+      i++;
     }
   }
   text = newLines.join('\n');
