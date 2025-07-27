@@ -55,19 +55,21 @@
 		"scopes": {
 			"bot": [
 				"app_mentions:read",
-				"commands",
-				"chat:write",
-				"users:read",
-				"users:read.email",
+				"assistant:write",
 				"channels:read",
-				"groups:read",
-				"im:read",
-				"im:history",
-				"files:read",
-				"files:write",
+				"channels:join",
+				"channels:history",
+				"chat:write",
+				"commands",
 				"conversations.connect:read",
 				"conversations.connect:write",
-				"assistant:write"
+				"files:read",
+				"files:write",
+				"groups:read",
+				"im:history",
+				"im:read",
+				"users:read",
+				"users:read.email"
 			]
 		}
 	},

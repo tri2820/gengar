@@ -4,7 +4,7 @@ import { CerebrasChatCompletion } from "./types/cerebras";
 import { Message, SlackFile } from "./types/message";
 import { formatSlackMarkdown, notEmpty, parseThinkOutput } from "./utils";
 
-async function showNothingToSummarize(client: SlackAPIClient, payload: GlobalShortcut | MessageShortcut) {
+async function showView(client: SlackAPIClient, payload: GlobalShortcut | MessageShortcut, text: string = "Nothing to summarize!") {
     await client.views.open({
         trigger_id: payload.trigger_id,
         view: {
@@ -16,7 +16,7 @@ async function showNothingToSummarize(client: SlackAPIClient, payload: GlobalSho
                     type: 'section',
                     text: {
                         type: 'plain_text',
-                        text: `Nothing to summarize! Please use this shortcut on a message with files or text.`
+                        text
                     }
                 }
             ],
@@ -84,18 +84,40 @@ export const SummarizeShortcut: ShortcutLazyHandler<SlackEdgeAppEnv> = async ({ 
 
     console.log("Summarize shortcut triggered with payload:", JSON.stringify(payload, null, 2));
 
+
     // Type guard for MessageShortcut
     if (!('message' in payload)) {
         console.warn("Invalid payload: 'message' field is missing.");
-        await showNothingToSummarize(context.client, payload);
+        await showView(context.client, payload);
         return;
     }
+
+
+    try {
+        const result = await context.client.conversations.info({
+            channel: payload.channel.id
+        });
+        console.log("Channel info:", result);
+    } catch {
+        console.error("This channel is not accessible by the app.");
+        try {
+            const result = await context.client.conversations.join({
+                channel: payload.channel.id
+            });
+            console.log("Joined channel:", payload.channel.id, result);
+        } catch (error) {
+            console.error("Error joining channel:", error);
+            await showView(context.client, payload, 'This channel is not accessible by the bot. Please make sure the bot is invited to this channel!');
+            return;
+        }
+    }
+
 
     console.log("Valid payload with message:", payload.message);
     const msg = payload.message as Message;
     if (!msg.text && (!msg.files || msg.files.length === 0)) {
         console.warn("No files to summarize in the message.");
-        await showNothingToSummarize(context.client, payload);
+        await showView(context.client, payload);
         return;
     }
 
