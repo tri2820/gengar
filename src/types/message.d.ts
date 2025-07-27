@@ -34,7 +34,7 @@ export type SlackFile = {
 
 export type Message = {
     text: string;
-    files: SlackFile[];
+    files: SlackFile[] | undefined;
     upload: boolean;
     user: string;
     display_as_bot: boolean;

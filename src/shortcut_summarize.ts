@@ -1,55 +1,32 @@
 import { env } from "cloudflare:workers";
-import { AnyModalBlock, ShortcutLazyHandler, SlackAPIClient, SlackEdgeAppEnv, ViewsOpenResponse } from "slack-cloudflare-workers";
+import { ChatPostMessageResponse, GlobalShortcut, MessageShortcut, ShortcutLazyHandler, SlackAPIClient, SlackEdgeAppEnv } from "slack-cloudflare-workers";
 import { CerebrasChatCompletion } from "./types/cerebras";
-import { Message } from "./types/message";
-import { formatSlackMarkdown, parseThinkOutput } from "./utils";
+import { Message, SlackFile } from "./types/message";
+import { formatSlackMarkdown, notEmpty, parseThinkOutput } from "./utils";
 
-export const SummarizeShortcut: ShortcutLazyHandler<SlackEdgeAppEnv> = async ({ context, payload }) => {
-    // Type guard for MessageShortcut
-    if (!('message' in payload)) {
-        await context.client.views.open({
-            trigger_id: payload.trigger_id,
-            view: {
-                type: "modal",
-                callback_id: "view_1",
-                title: { type: "plain_text", text: "Summary" },
-                blocks: [
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'plain_text',
-                            text: `Nothing to summarize! Please use this shortcut on a message with files or text.`
-                        }
+async function showNothingToSummarize(client: SlackAPIClient, payload: GlobalShortcut | MessageShortcut) {
+    await client.views.open({
+        trigger_id: payload.trigger_id,
+        view: {
+            type: "modal",
+            callback_id: "view_1",
+            title: { type: "plain_text", text: "Summary" },
+            blocks: [
+                {
+                    type: 'section',
+                    text: {
+                        type: 'plain_text',
+                        text: `Nothing to summarize! Please use this shortcut on a message with files or text.`
                     }
-                ],
-            },
-        });
-        return;
-    }
-
-    const msg = payload.message as Message;
-    const notEmpty = <T>(value: T | null | undefined): value is T => value !== null && value !== undefined;
-
-    const placeholder = await context.client.chat.postMessage({
-        channel: payload.channel.id,
-        thread_ts: payload.message.ts,
-        text: '',
-        reply_broadcast: false,
-        blocks: [
-            {
-                type: "context",
-                elements: [
-                    {
-                        type: "plain_text",
-                        text: `Summarizing message${msg.files.length > 0 ? ` and ${msg.files.length} ${msg.files.length > 1 ? 'files' : 'file'}` : ''}. This may take a moment...`
-                    },
-                ],
-            }
-        ]
+                }
+            ],
+        },
     });
+}
 
+async function filesToChunks(files: SlackFile[]) {
 
-    let conversions = (await Promise.all(msg.files.map(async file => {
+    let conversions = (await Promise.all(files.map(async file => {
 
         try {
             const url = file.url_private;
@@ -83,23 +60,11 @@ export const SummarizeShortcut: ShortcutLazyHandler<SlackEdgeAppEnv> = async ({ 
     let totalBudget = 40000;
     const minBudget = conversions.length * 100; // At least 100 characters per file
     if (minBudget > totalBudget) {
-        await context.client.chat.update({
-            ts: placeholder.ts!,
-            channel: placeholder.channel!,
-            text: '',
-            blocks: [
-                {
-                    type: 'section',
-                    text: {
-                        type: 'plain_text',
-                        text: `Not enough budget to summarize ${conversions.length} files. Minimum budget is ${minBudget} characters.`
-                    }
-                }
-            ]
-        });
-
-
-        return;
+        return {
+            error: {
+                message: `Not enough budget to process all files.`
+            }
+        }
     }
 
 
@@ -110,6 +75,84 @@ export const SummarizeShortcut: ShortcutLazyHandler<SlackEdgeAppEnv> = async ({ 
         totalBudget -= allocated;
         return markdown.slice(0, allocated);
     })
+    return {
+        data: chunks
+    }
+}
+
+export const SummarizeShortcut: ShortcutLazyHandler<SlackEdgeAppEnv> = async ({ context, payload }) => {
+
+    console.log("Summarize shortcut triggered with payload:", JSON.stringify(payload, null, 2));
+
+    // Type guard for MessageShortcut
+    if (!('message' in payload)) {
+        console.warn("Invalid payload: 'message' field is missing.");
+        await showNothingToSummarize(context.client, payload);
+        return;
+    }
+
+    console.log("Valid payload with message:", payload.message);
+    const msg = payload.message as Message;
+    if (!msg.text && (!msg.files || msg.files.length === 0)) {
+        console.warn("No files to summarize in the message.");
+        await showNothingToSummarize(context.client, payload);
+        return;
+    }
+
+    console.log("Message has text or files to summarize:", msg);
+
+
+    console.log('wait postMessage', payload.channel.id, payload.message.ts);
+    let placeholder: ChatPostMessageResponse;
+    try {
+        placeholder = await context.client.chat.postMessage({
+            channel: payload.channel.id,
+            thread_ts: payload.message.ts,
+            text: 'some text',
+            reply_broadcast: false,
+            blocks: [
+                {
+                    type: "context",
+                    elements: [
+                        {
+                            type: "plain_text",
+                            text: `Summarizing message${msg.files ? ` and ${msg.files.length} ${msg.files.length > 1 ? 'files' : 'file'}` : ''}. This may take a moment...`
+                        },
+                    ],
+                }
+            ]
+        });
+    } catch (error) {
+        console.error("Error posting placeholder message:", error);
+        return;
+    }
+
+    console.log("Placeholder message sent:", placeholder);
+
+
+    let chunks: string[] = [];
+    if (msg.files) {
+        const result = await filesToChunks(msg.files);
+        if (result.error) {
+            await context.client.chat.update({
+                ts: placeholder.ts!,
+                channel: placeholder.channel!,
+                text: '',
+                blocks: [
+                    {
+                        type: 'section',
+                        text: {
+                            type: 'plain_text',
+                            text: `Error: ${result.error.message}`
+                        }
+                    }
+                ]
+            });
+            return;
+        }
+        chunks = result.data;
+    }
+
 
     const messageText = `# Message\n${payload.message.text}`
     const filesText = chunks.map((chunk, i) => `File ${i + 1}:\n${chunk}`).join("\n\n");
