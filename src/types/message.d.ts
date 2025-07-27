@@ -1,0 +1,45 @@
+export type SlackFile = {
+    id: string;
+    created: number;
+    timestamp: number;
+    name: string;
+    title: string;
+    mimetype: string;
+    filetype: string;
+    pretty_type: string;
+    user: string;
+    user_team: string;
+    editable: boolean;
+    size: number;
+    mode: string;
+    is_external: boolean;
+    external_type: string;
+    is_public: boolean;
+    public_url_shared: boolean;
+    display_as_bot: boolean;
+    username: string;
+    url_private: string;
+    url_private_download: string;
+    media_display_type: string;
+    thumb_pdf: string;
+    thumb_pdf_w: number;
+    thumb_pdf_h: number;
+    permalink: string;
+    permalink_public: string;
+    is_starred: boolean;
+    skipped_shares: boolean;
+    has_rich_preview: boolean;
+    file_access: string;
+};
+
+export type Message = {
+    text: string;
+    files: SlackFile[];
+    upload: boolean;
+    user: string;
+    display_as_bot: boolean;
+    blocks: any[];
+    type: string;
+    ts: string;
+    client_msg_id: string;
+};

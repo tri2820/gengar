@@ -1,0 +1,87 @@
+{
+	"display_information": {
+		"name": "Robotic Giovanni",
+		"description": "Virtual employee. Expert in AI & business. Founder of Team Rocket.",
+		"background_color": "#300030"
+	},
+	"features": {
+		"app_home": {
+			"home_tab_enabled": false,
+			"messages_tab_enabled": true,
+			"messages_tab_read_only_enabled": false
+		},
+		"bot_user": {
+			"display_name": "Robotic Giovanni",
+			"always_online": true
+		},
+		"shortcuts": [
+			{
+				"name": "Summarize",
+				"type": "message",
+				"callback_id": "summarize",
+				"description": "Output the summary of message content and any attachment"
+			},
+			{
+				"name": "Trending News",
+				"type": "global",
+				"callback_id": "trending-news",
+				"description": "Today trending news"
+			}
+		],
+		"slash_commands": [
+			{
+				"command": "/imagine",
+				"url": "https://url-deposits-laptops-cattle.trycloudflare.com",
+				"description": "Generate an image from a prompt using AI",
+				"usage_hint": "<prompt> [--s <style> | --list-styles]",
+				"should_escape": true
+			}
+		],
+		"assistant_view": {
+			"assistant_description": "Virtual employee. Expert in AI & business. Founder of Team Rocket.",
+			"suggested_prompts": [
+				{
+					"title": "Growth hacking",
+					"message": "Weird ideas that I can use to grow my business?"
+				},
+				{
+					"title": "Competitor analysis",
+					"message": "What are my competitors doing?"
+				}
+			]
+		}
+	},
+	"oauth_config": {
+		"scopes": {
+			"bot": [
+				"app_mentions:read",
+				"commands",
+				"chat:write",
+				"users:read",
+				"users:read.email",
+				"channels:read",
+				"groups:read",
+				"im:read",
+				"im:history",
+				"files:read",
+				"files:write",
+				"conversations.connect:read",
+				"conversations.connect:write",
+				"assistant:write"
+			]
+		}
+	},
+	"settings": {
+		"event_subscriptions": {
+			"request_url": "https://url-deposits-laptops-cattle.trycloudflare.com",
+			"bot_events": ["app_mention", "message.im", "assistant_thread_started", "app_home_opened"]
+		},
+		"interactivity": {
+			"is_enabled": true,
+			"request_url": "https://url-deposits-laptops-cattle.trycloudflare.com"
+		},
+		"org_deploy_enabled": false,
+		"socket_mode_enabled": false,
+		"token_rotation_enabled": false
+	}
+}
