@@ -4,8 +4,16 @@ export type CerebrasChatCompletion = {
         finish_reason: string;
         index: number;
         message: {
-            content: string;
+            content?: string;
             role: string;
+            tool_calls?: Array<{
+                id: string;
+                type: "function";
+                function: {
+                    name: string;
+                    arguments: string;
+                };
+            }>;
         };
     }>;
     created: number;

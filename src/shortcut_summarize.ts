@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { ChatPostMessageResponse, GlobalShortcut, MessageShortcut, ShortcutLazyHandler, SlackAPIClient, SlackEdgeAppEnv } from "slack-cloudflare-workers";
 import { CerebrasChatCompletion } from "./types/cerebras";
 import { Message, SlackFile } from "./types/message";
-import { formatSlackMarkdown, notEmpty, parseThinkOutput, splitToBlocks } from "./utils";
+import { formatSlackMarkdown, notEmpty, parseThinkOutput, splitToChunks } from "./utils";
 
 async function showView(client: SlackAPIClient, payload: GlobalShortcut | MessageShortcut, text: string = "Nothing to summarize!") {
     await client.views.open({
@@ -220,7 +220,7 @@ export const SummarizeShortcut: ShortcutLazyHandler<SlackEdgeAppEnv> = async ({ 
         double_pass: true,
     });
 
-    const blocks = splitToBlocks(formattedBuffer);
+    const blocks = splitToChunks(formattedBuffer);
 
     console.log(`formattedBuffer blocks:`, JSON.stringify(blocks, null, 2));
     try {

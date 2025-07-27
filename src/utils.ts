@@ -1,7 +1,7 @@
 import { ConversationsRepliesResponse } from 'slack-cloudflare-workers';
 import slackifyMarkdown from 'slackify-markdown';
 export type AIMessagesFormat = {
-    role: "user" | "assistant" | "system";
+    role: "user" | "assistant" | "system" | "tool";
     content: string;
 };
 
@@ -37,13 +37,7 @@ export function formatSlackMarkdown(text: string, opts?: {
     return formatted;
 }
 
-export function slackHistoryToMessages(history: ConversationsRepliesResponse, opts?: {
-    no_think?: boolean;
-    history_chars_limit?: number;
-}): {
-    messages: AIMessagesFormat[]
-} {
-    const HISTORY_CHARS_LIMIT = opts?.history_chars_limit ?? 1500;
+export function slackMessagesToAIMessages(history: ConversationsRepliesResponse): AIMessagesFormat[] {
     const extractTextFromBlocks = (blocks?: any[]): string | undefined => {
         if (!Array.isArray(blocks)) return undefined;
         for (const block of blocks) {
@@ -72,7 +66,7 @@ export function slackHistoryToMessages(history: ConversationsRepliesResponse, op
         return result.length > 0 ? result : undefined;
     };
 
-    const messages = (history.messages ?? [])
+    return (history.messages ?? [])
         .filter((msg) => {
             const blockText = extractTextFromBlocks((msg as any).blocks);
             const contentText = blockText ?? msg.text;
@@ -90,7 +84,9 @@ export function slackHistoryToMessages(history: ConversationsRepliesResponse, op
                 content: msg.bot_id ? contentText as string : `${contentText}` as string
             } as const;
         });
+}
 
+export function trimAIMessagesToBudget(messages: AIMessagesFormat[], history_chars_limit: number = 30000): AIMessagesFormat[] {
     // Remove tail AI messages
     // Remove consecutive assistant messages from the end
     let lastUserIdx = messages.length - 1;
@@ -101,23 +97,15 @@ export function slackHistoryToMessages(history: ConversationsRepliesResponse, op
     const trimmedMessages = messages.slice(0, lastUserIdx + 1);
     const messagesToUse = trimmedMessages;
 
-    // Keep only the most recent messages whose combined content is <= HISTORY_CHARS_LIMIT chars
+    // Keep only the most recent messages whose combined content is <= history_chars_limit chars
     let totalLength = 0;
     const recent: AIMessagesFormat[] = [];
 
     for (let i = messagesToUse.length - 1; i >= 0; i--) {
         let msg = messagesToUse[i];
-
-
-
-        // If this is the most recent message, append /no_think
-        if (opts?.no_think && i === messages.length - 1) {
-            msg = { ...msg, content: msg.content + " /no_think" };
-
-        }
-        if (totalLength + msg.content.length > HISTORY_CHARS_LIMIT) {
+        if (totalLength + msg.content.length > history_chars_limit) {
             // Try to fit a slice of the last message
-            const remaining = HISTORY_CHARS_LIMIT - totalLength;
+            const remaining = history_chars_limit - totalLength;
             if (remaining > 0) {
                 recent.unshift({
                     ...msg,
@@ -129,15 +117,12 @@ export function slackHistoryToMessages(history: ConversationsRepliesResponse, op
         recent.unshift(msg);
         totalLength += msg.content.length;
     }
-    return {
-        messages: recent,
-
-    }
+    return recent;
 }
 
 export const notEmpty = <T>(value: T | null | undefined): value is T => value !== null && value !== undefined;
 // Split formattedBuffer into blocks respecting word boundaries, add ... at the tail of each block except the last
-export function splitToBlocks(text: string, maxLen: number = 2000): string[] {
+export function splitToChunks(text: string, maxLen: number = 3000): string[] {
     const blocks: string[] = [];
     let start = 0;
     while (start < text.length) {
