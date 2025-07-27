@@ -5,7 +5,14 @@ import { env } from "cloudflare:workers";
 import { CerebrasChatCompletion } from "../types/cerebras";
 
 type Req = Parameters<EventLazyHandler<"message"> | EventLazyHandler<"app_mention">>[0];
-export default async function flow_conversation(req: Req, opts: { show_think?: boolean } & ({ type: 'thread', ts: string } | { type: 'channel' })) {
+export default async function flow_conversation(req: Req, opts: {
+    show_think?: boolean, context_decorator?: (props: {
+        modelId: string;
+        elapsed_sec: string;
+        totalTokens: string | number;
+        messages: AIMessagesFormat[];
+    }) => string
+} & ({ type: 'thread', ts: string } | { type: 'channel' })) {
     const { payload, context } = req;
 
     const startTime = Date.now();
@@ -59,7 +66,10 @@ export default async function flow_conversation(req: Req, opts: { show_think?: b
                 ]);
             }
 
-            // console.log(`history:`, JSON.stringify(history, null, 2));
+            // Old -> New
+            history.messages?.reverse();
+            console.log(`history:`, JSON.stringify(history, null, 2));
+
             const result = slackHistoryToMessages(history, {
                 no_think: false,
             });
@@ -138,7 +148,12 @@ export default async function flow_conversation(req: Req, opts: { show_think?: b
         elements: [
             {
                 type: "plain_text",
-                text: `${modelId} • ${elapsed_sec} seconds • ${totalTokens} tokens • ${messages.length} context messages`,
+                text: opts.context_decorator ? opts.context_decorator({
+                    modelId,
+                    elapsed_sec,
+                    totalTokens,
+                    messages,
+                }) : `${modelId} • ${elapsed_sec} seconds • ${totalTokens} tokens • ${messages.length} context messages`,
             },
         ],
     };
