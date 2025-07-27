@@ -7,6 +7,7 @@ import { search_tool } from "./search_tool";
 
 
 async function inference(messages: AIMessagesFormat[], iter_idx = 0) {
+    messages = structuredClone(messages);
 
     let tool_logs: string[] = []
     let called_tool = false;
@@ -15,6 +16,20 @@ async function inference(messages: AIMessagesFormat[], iter_idx = 0) {
     }
 
     // console.log(`messages:`, JSON.stringify(messages, null, 2));
+
+    let last_user_message: AIMessagesFormat | null = null;
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role === 'user') {
+            last_user_message = messages[i];
+            break;
+        }
+    }
+
+    // Enable thinking mode
+    if (last_user_message) {
+        last_user_message.content += '\\think'
+    }
+
     const modelId = `qwen-3-235b-a22b`;
     // Non-streaming AI response using Cerebras API
     const cerebrasPayload = {
@@ -216,7 +231,7 @@ export default async function flow_conversation(req: Req, opts: {
         result = await inference(messages, iteration);
         const text = result.cerebrasData.choices?.[0]?.message?.content;
         if (text) {
-            console.log(`AI said:`, text);
+            console.log(`AI said:`, text.slice(0, 30) + `...` + text.slice(-30));
         }
 
         if (result.tool_logs.length > 0) {
@@ -262,10 +277,7 @@ export default async function flow_conversation(req: Req, opts: {
     console.log(`Total tokens used:`, totalTokens);
     const { thinkBlock, mainText } = parseThinkOutput(aiResponseText);
 
-
-    let formattedBuffer = formatSlackMarkdown(mainText, {
-        double_pass: true,
-    });
+    let formattedBuffer = formatSlackMarkdown(mainText);
 
     const endTime = Date.now();
     const elapsed_sec = ((endTime - startTime) / 1000).toFixed(1);

@@ -4,5 +4,9 @@ import flow_conversation from "./ai/flow_convertsation";
 
 export const MessageEvent: EventLazyHandler<"message"> = async (req) => {
     if (!isPostedMessageEvent(req.payload)) return;
-    await flow_conversation(req, { type: 'thread', ts: req.payload.thread_ts! });
+    try {
+        await flow_conversation(req, { type: 'thread', ts: req.payload.thread_ts!, show_think: true });
+    } catch (e) {
+        console.error("Error in MessageEvent handler:", e);
+    }
 };

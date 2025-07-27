@@ -1,9 +1,11 @@
 import { ConversationsRepliesResponse } from 'slack-cloudflare-workers';
-import slackifyMarkdown from 'slackify-markdown';
+import { toMRKDWN } from './mrkdwn';
+
 export type AIMessagesFormat = {
     role: "user" | "assistant" | "system" | "tool";
     content: string;
 };
+
 
 
 export function parseThinkOutput(aiResponseText: string) {
@@ -21,15 +23,10 @@ export function parseThinkOutput(aiResponseText: string) {
 }
 
 
-export function formatSlackMarkdown(text: string, opts?: {
-    double_pass?: boolean; // If true, will run slackifyMarkdown twice to ensure proper formatting
-}): string {
+export function formatSlackMarkdown(text: string): string {
     // Convert markdown to Slack format
-    let formatted = slackifyMarkdown(text);
-    if (opts?.double_pass && formatted.includes('**')) {
-        // Double pass to ensure proper formatting, this is just a workaround
-        formatted = slackifyMarkdown(formatted)
-    }
+    let formatted = toMRKDWN(text);
+
     // Replace triple backslash n (\\\n) with real newline
     formatted = formatted.replace(/\\\n/g, '\n');
     // Replace double backslash n (\\n) with real newline
