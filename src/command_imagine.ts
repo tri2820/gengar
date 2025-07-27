@@ -52,8 +52,8 @@ export const ImagineCommand = async (req: SlackRequestWithRespond<SlackEdgeAppEn
         return;
     }
 
-    // Check for --list-styles flag
-    if (commandText.trim() === '--list-styles') {
+    // Check for --helps flag
+    if (commandText.trim() === '--helps') {
         const stylesList = stylesArray.map((s, i) => `${i + 1}. ${s.key}`).join('\n');
         await context.respond({
             text: `Available styles:\n${stylesList}`,

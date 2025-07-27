@@ -1,7 +1,7 @@
 {
 	"display_information": {
-		"name": "Robotic Giovanni",
-		"description": "Virtual employee. Expert in AI & business. Founder of Team Rocket.",
+		"name": "Assistants",
+		"description": "Virtual employees. Here to help.",
 		"background_color": "#300030"
 	},
 	"features": {
@@ -11,7 +11,7 @@
 			"messages_tab_read_only_enabled": false
 		},
 		"bot_user": {
-			"display_name": "Robotic Giovanni",
+			"display_name": "Assistants",
 			"always_online": true
 		},
 		"shortcuts": [
@@ -33,16 +33,16 @@
 				"command": "/imagine",
 				"url": "https://url-deposits-laptops-cattle.trycloudflare.com",
 				"description": "Generate an image from a prompt using AI",
-				"usage_hint": "<prompt> [--s <style> | --list-styles]",
+				"usage_hint": "<prompt> [--s <style> | --helps]",
 				"should_escape": true
 			}
 		],
 		"assistant_view": {
-			"assistant_description": "Virtual employee. Expert in AI & business. Founder of Team Rocket.",
+			"assistant_description": "Virtual employees. Here to help.",
 			"suggested_prompts": [
 				{
 					"title": "Growth hacking",
-					"message": "Weird ideas that I can use to grow my business?"
+					"message": "Ideas that I can use to grow my business?"
 				},
 				{
 					"title": "Competitor analysis",

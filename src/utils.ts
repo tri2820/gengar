@@ -40,7 +40,9 @@ export function formatSlackMarkdown(text: string, opts?: {
 export function slackHistoryToMessages(history: ConversationsRepliesResponse, opts?: {
     no_think?: boolean;
     history_chars_limit?: number;
-}): AIMessagesFormat[] {
+}): {
+    messages: AIMessagesFormat[]
+} {
     const HISTORY_CHARS_LIMIT = opts?.history_chars_limit ?? 1500;
     const extractTextFromBlocks = (blocks?: any[]): string | undefined => {
         if (!Array.isArray(blocks)) return undefined;
@@ -102,6 +104,7 @@ export function slackHistoryToMessages(history: ConversationsRepliesResponse, op
     // Keep only the most recent messages whose combined content is <= HISTORY_CHARS_LIMIT chars
     let totalLength = 0;
     const recent: AIMessagesFormat[] = [];
+
     for (let i = messagesToUse.length - 1; i >= 0; i--) {
         let msg = messagesToUse[i];
 
@@ -110,6 +113,7 @@ export function slackHistoryToMessages(history: ConversationsRepliesResponse, op
         // If this is the most recent message, append /no_think
         if (opts?.no_think && i === messages.length - 1) {
             msg = { ...msg, content: msg.content + " /no_think" };
+
         }
         if (totalLength + msg.content.length > HISTORY_CHARS_LIMIT) {
             // Try to fit a slice of the last message
@@ -125,7 +129,29 @@ export function slackHistoryToMessages(history: ConversationsRepliesResponse, op
         recent.unshift(msg);
         totalLength += msg.content.length;
     }
-    return recent;
+    return {
+        messages: recent,
+
+    }
 }
 
 export const notEmpty = <T>(value: T | null | undefined): value is T => value !== null && value !== undefined;
+// Split formattedBuffer into blocks respecting word boundaries, add ... at the tail of each block except the last
+export function splitToBlocks(text: string, maxLen: number = 2000): string[] {
+    const blocks: string[] = [];
+    let start = 0;
+    while (start < text.length) {
+        let end = start + maxLen;
+        if (end >= text.length) {
+            blocks.push(text.slice(start));
+            break;
+        }
+        // Find last space before maxLen
+        let lastSpace = text.lastIndexOf(' ', end);
+        if (lastSpace <= start) lastSpace = end; // fallback: hard split
+        let chunk = text.slice(start, lastSpace);
+        blocks.push(chunk + ' ...');
+        start = lastSpace + 1;
+    }
+    return blocks;
+}

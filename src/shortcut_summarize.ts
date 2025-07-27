@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { ChatPostMessageResponse, GlobalShortcut, MessageShortcut, ShortcutLazyHandler, SlackAPIClient, SlackEdgeAppEnv } from "slack-cloudflare-workers";
 import { CerebrasChatCompletion } from "./types/cerebras";
 import { Message, SlackFile } from "./types/message";
-import { formatSlackMarkdown, notEmpty, parseThinkOutput } from "./utils";
+import { formatSlackMarkdown, notEmpty, parseThinkOutput, splitToBlocks } from "./utils";
 
 async function showView(client: SlackAPIClient, payload: GlobalShortcut | MessageShortcut, text: string = "Nothing to summarize!") {
     await client.views.open({
@@ -219,29 +219,8 @@ export const SummarizeShortcut: ShortcutLazyHandler<SlackEdgeAppEnv> = async ({ 
     let formattedBuffer = formatSlackMarkdown(mainText, {
         double_pass: true,
     });
-    const maxBlockLength = 2000;
 
-    // Split formattedBuffer into blocks respecting word boundaries, add ... at the tail of each block except the last
-    function splitToBlocks(text: string, maxLen: number): string[] {
-        const blocks: string[] = [];
-        let start = 0;
-        while (start < text.length) {
-            let end = start + maxLen;
-            if (end >= text.length) {
-                blocks.push(text.slice(start));
-                break;
-            }
-            // Find last space before maxLen
-            let lastSpace = text.lastIndexOf(' ', end);
-            if (lastSpace <= start) lastSpace = end; // fallback: hard split
-            let chunk = text.slice(start, lastSpace);
-            blocks.push(chunk + ' ...');
-            start = lastSpace + 1;
-        }
-        return blocks;
-    }
-
-    const blocks = splitToBlocks(formattedBuffer, maxBlockLength);
+    const blocks = splitToBlocks(formattedBuffer);
 
     console.log(`formattedBuffer blocks:`, JSON.stringify(blocks, null, 2));
     try {
