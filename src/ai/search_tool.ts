@@ -58,16 +58,11 @@ export async function search_tool(query: string) {
             original: result.query.original
         },
         results: result.results.map(item => {
-            // Extract host from url
-            let host = "";
-            try {
-                host = new URL(item.url).host;
-            } catch { }
             return {
                 title: item.title,
                 age: item.age,
                 extra_snippets: item.extra_snippets,
-                host
+                url: item.url,
             };
         })
     };

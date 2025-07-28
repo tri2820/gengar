@@ -83,7 +83,7 @@ export function slackMessagesToAIMessages(history: ConversationsRepliesResponse)
         });
 }
 
-export function trimAIMessagesToBudget(messages: AIMessagesFormat[], history_chars_limit: number = 30000): AIMessagesFormat[] {
+export function trimAIMessagesToBudget(messages: AIMessagesFormat[], tail_budget: number = 25000, head_budget = 5000): AIMessagesFormat[] {
     // Remove tail AI messages
     // Remove consecutive assistant messages from the end
     let lastUserIdx = messages.length - 1;
@@ -94,32 +94,48 @@ export function trimAIMessagesToBudget(messages: AIMessagesFormat[], history_cha
     const trimmedMessages = messages.slice(0, lastUserIdx + 1);
     const messagesToUse = trimmedMessages;
 
-    // Keep only the most recent messages whose combined content is <= history_chars_limit chars
-    let totalLength = 0;
+
     const recent: AIMessagesFormat[] = [];
 
+
+    let HEAD_BUDGET_EACH = 0;
     for (let i = messagesToUse.length - 1; i >= 0; i--) {
         let msg = messagesToUse[i];
-        if (totalLength + msg.content.length > history_chars_limit) {
-            // Try to fit a slice of the last message
-            const remaining = history_chars_limit - totalLength;
-            if (remaining > 0) {
+        if (tail_budget == 0) {
+            const cost = Math.min(msg.content.length, HEAD_BUDGET_EACH);
+            const save = HEAD_BUDGET_EACH - cost;
+            if (head_budget >= cost) {
                 recent.unshift({
                     ...msg,
-                    content: `...${msg.content.slice(-remaining)}`
+                    content: `...${msg.content.slice(-HEAD_BUDGET_EACH)}`
                 });
+                head_budget = head_budget - cost + save;
+            } else {
+                break; // No budget left
             }
-            break;
         }
-        recent.unshift(msg);
-        totalLength += msg.content.length;
+
+        if (tail_budget < msg.content.length) {
+            if (tail_budget > 0) {
+                // Try to fit a slice of the last message
+                recent.unshift({
+                    ...msg,
+                    content: `...${msg.content.slice(-tail_budget)}`
+                });
+                tail_budget = 0; // All budget used
+                HEAD_BUDGET_EACH = Math.floor(head_budget / Math.min(i, 5)); // Divide head budget evenly among remaining messages
+            }
+        } else {
+            recent.unshift(msg);
+            tail_budget -= msg.content.length;
+        }
     }
     return recent;
 }
 
 export const notEmpty = <T>(value: T | null | undefined): value is T => value !== null && value !== undefined;
 // Split formattedBuffer into blocks respecting word boundaries, add ... at the tail of each block except the last
-export function splitToChunks(text: string, maxLen: number = 3000): string[] {
+export function splitToChunks(text: string, maxLen: number = 2000): string[] {
     const blocks: string[] = [];
     let start = 0;
     while (start < text.length) {

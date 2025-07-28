@@ -6,8 +6,9 @@ export function toMRKDWN(markdown: string): string {
   // Use a placeholder for bold text to avoid conflicts with italic conversion
   const boldPlaceholder = '{{{BOLD}}}';
 
-  // Headings: # Heading -> *Heading*
-  text = text.replace(/^#{1,6}\s+(.*)$/gm, `${boldPlaceholder}$1${boldPlaceholder}`);
+  // Remove bolding from headers: ### **Header** -> ### Header
+  text = text.replace(/^(#{1,6}\s*)\*\*(.*?)\*\*/gm, '$1$2');
+  text = text.replace(/^(#{1,6}\s*)__(.*?)__/gm, '$1$2');
 
   // Bold: **Bold** or __Bold__ -> *Bold*
   text = text.replace(/\*\*([^*]+)\*\*/g, `${boldPlaceholder}$1${boldPlaceholder}`);
